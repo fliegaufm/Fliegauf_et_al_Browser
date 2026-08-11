@@ -1,0 +1,9 @@
+.Rhistory
+.RData
+.Rproj.user/
+.DS_Store
+
+# Other local development files
+Build_App.R
+Testing_script.R
+omnipathr-log/
