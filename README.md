@@ -8,7 +8,10 @@ Fig. 5: - sdCAMs only data contains subdural CAMs without any choroid plexus CAM
         - Microglia only data contains microglia from whole mouse brain
         - Full dataset contains all sorted immune cell types, mostly sdCAMs, Microglia and Monocytes
 
-Fig. 6: The scATACseq data of dural and subdural CNS macrophages and blood monocytes will follow in a future update. 
+Fig. 6: scATACseq data of dural and subdural CNS macrophages and microglia and blood monocytes 8w after BLZ945 or CTL 
+        - the data is currently limited to the gene activity matrix, an inferred RNA expression based on the accessibility of genetic regions
+        - actual called peaks data is too large to include directly in this app
+        - a future update is planned to provide the peaks data
 
 Check the browsable atlas here: https://019ff526-d41d-8795-3dcf-19f5317bab28.share.connect.posit.cloud/
 
