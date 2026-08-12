@@ -4909,7 +4909,7 @@
   },
   "files": {
     "app.R": {
-      "checksum": "ea9ec47455271c3ac3b8f84e62a71ee1"
+      "checksum": "a2ea225d78cbe3e6a75003ea74bc102a"
     },
     "Build_App.R": {
       "checksum": "5aaab5108d8bd7bc99a420cdd1e7d6f6"
@@ -4931,6 +4931,9 @@
     },
     "web_data/fig5_mg.rds": {
       "checksum": "0fb668bf761f6daabd012c0bd8d26f59"
+    },
+    "web_data/fig6.rds": {
+      "checksum": "ff65162949409763faf1828b749ab6e4"
     }
   },
   "users": null

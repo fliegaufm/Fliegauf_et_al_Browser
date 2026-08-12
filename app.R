@@ -20,7 +20,8 @@ dataset_files <- c(
   "Fig 2 scRNAseq of CNS Macrophage Niches" = "web_data/fig2.rds",
   "Fig 5 scRNAseq of sdCAMs" = "web_data/fig5_cams.rds",
   "Fig 5 scRNAseq of Microglia" = "web_data/fig5_mg.rds",
-  "Fig 5 scRNAseq of subdural immune cells" = "web_data/fig5_full.rds"
+  "Fig 5 scRNAseq of subdural immune cells" = "web_data/fig5_full.rds",
+  "Fig 6 scATACseq of CNS Macrophages and Blood Monocytes (gene activity matrix only)" = "web_data/fig6.rds"
 )
 
 fig2_cell_subtype_colors <- readRDS(
@@ -79,7 +80,7 @@ get_group_colors <- function(obj, metadata, dataset) {
   seed_colors <- c(
     "#1034A6",
     "#C30F16",
-    "#CCBB44",
+    "#CCBB44", 
     "#66CCEE",
     "#AA3377",
     "#BBBBBB",
@@ -121,7 +122,7 @@ ui <- page_sidebar(
       inputId = "dataset",
       label = NULL,
       choices = names(dataset_files),
-      selected = names(dataset_files)[1]
+      selected = names(dataset_files)[2]
     ),
     
     hr(),
@@ -364,7 +365,7 @@ server <- function(input, output, session) {
         
       } else {
         
-        rownames(obj[["called_peaks"]])
+        rownames(obj[["RNA_called_peaks"]])
         
       }
       
