@@ -757,7 +757,15 @@ server <- function(input, output, session) {
       
       # --------------------------------------------------------
       # Special case: Fig 2 tissue
-      # Group by cell_type and split by tissue
+      #
+      # Three-dimensional stratification:
+      #
+      #   ROWS       = tissue
+      #   X-axis     = cell type
+      #   VIOLINS    = condition
+      #
+      # Importantly, each tissue gets ONLY the cell types that
+      # actually occur in that tissue.
       # --------------------------------------------------------
       
     } else if (
@@ -765,29 +773,185 @@ server <- function(input, output, session) {
       input$metadata == "tissue"
     ) {
       
-      tissue_colors <- get_tissue_colors(obj)
+      validate(
+        need(
+          all(
+            c("cell_type", "tissue", "condition") %in%
+              colnames(obj@meta.data)
+          ),
+          "Fig 2 requires cell_type, tissue and condition metadata."
+        )
+      )
       
-      VlnPlot(
+      
+      # ------------------------------------------------------
+      # Extract expression + all three grouping variables
+      # ------------------------------------------------------
+      
+      expression_data <- FetchData(
         object = obj,
-        features = input$gene,
-        layer = "data",
-        group.by = "cell_type",
-        split.by = "tissue",
-        cols = tissue_colors,
-        pt.size = 0
+        vars = c(
+          input$gene,
+          "cell_type",
+          "tissue",
+          "condition"
+        ),
+        layer = "data"
+      )
+      
+      colnames(expression_data) <- c(
+        "expression",
+        "cell_type",
+        "tissue",
+        "condition"
+      )
+      
+      
+      # ------------------------------------------------------
+      # Remove incomplete metadata
+      # ------------------------------------------------------
+      
+      expression_data <- expression_data %>%
+        filter(
+          !is.na(expression),
+          !is.na(cell_type),
+          !is.na(tissue),
+          !is.na(condition)
+        )
+      
+      
+      # ------------------------------------------------------
+      # Get the actual order of tissues in the dataset
+      # ------------------------------------------------------
+      
+      tissue_levels <- unique(
+        as.character(expression_data$tissue)
+      )
+      
+      
+      # ------------------------------------------------------
+      # Get condition order
+      # ------------------------------------------------------
+      
+      condition_levels <- unique(
+        as.character(expression_data$condition)
+      )
+      
+      
+      # ------------------------------------------------------
+      # CRITICAL PART
+      #
+      # Do NOT globally factor cell_type before faceting.
+      #
+      # Instead, construct a separate cell_type factor for
+      # each tissue containing ONLY the cell types present
+      # in that tissue.
+      #
+      # This prevents empty cell-type positions appearing in
+      # tissues where that cell type does not exist.
+      # ------------------------------------------------------
+      
+      expression_data <- expression_data %>%
+        mutate(
+          tissue = factor(
+            tissue,
+            levels = tissue_levels
+          ),
+          condition = factor(
+            condition,
+            levels = condition_levels
+          )
+        ) %>%
+        group_by(tissue) %>%
+        mutate(
+          cell_type_plot = factor(
+            cell_type,
+            levels = unique(as.character(cell_type))
+          )
+        ) %>%
+        ungroup()
+      
+      
+      # ------------------------------------------------------
+      # Condition colors
+      # ------------------------------------------------------
+      
+      condition_colors <- get_condition_colors(obj)
+      
+      
+      # Make sure the colors are named according to the
+      # actual condition levels in this dataset.
+      condition_colors <- condition_colors[
+        condition_levels
+      ]
+      
+      
+      # ------------------------------------------------------
+      # Plot
+      # ------------------------------------------------------
+      
+      ggplot(
+        expression_data,
+        aes(
+          x = cell_type_plot,
+          y = expression,
+          fill = condition
+        )
       ) +
+        
+        geom_violin(
+          position = position_dodge(
+            width = 0.8
+          ),
+          scale = "width",
+          trim = TRUE,
+          na.rm = TRUE
+        ) +
+        
+        facet_grid(
+          rows = vars(tissue),
+          scales = "free_x",
+          space = "free_x",
+          drop = TRUE
+        ) +
+        
+        scale_fill_manual(
+          values = condition_colors,
+          drop = FALSE
+        ) +
+        
         labs(
           title = input$gene,
-          x = "cell_type",
-          y = "Normalized expression"
+          subtitle = "Expression by tissue, cell type and condition",
+          x = "Cell type",
+          y = "Normalized expression",
+          fill = "Condition"
         ) +
-        theme_classic(base_size = 13) +
+        
+        theme_classic(
+          base_size = 13
+        ) +
+        
         theme(
           axis.text.x = element_text(
             angle = 45,
-            hjust = 1
+            hjust = 1,
+            vjust = 1
           ),
-          legend.position = "bottom"
+          
+          strip.text.y = element_text(
+            angle = 0,
+            face = "bold"
+          ),
+          
+          strip.background = element_blank(),
+          
+          legend.position = "bottom",
+          
+          panel.spacing.y = unit(
+            0.8,
+            "lines"
+          )
         )
       
       
@@ -826,6 +990,7 @@ server <- function(input, output, session) {
         )
     }
   })
+  
   
   
   # ==========================================================
@@ -921,8 +1086,15 @@ server <- function(input, output, session) {
       
       
       # --------------------------------------------------------
-      # Special case: Fig 2 tissue
-      # Group by cell_type and split by tissue
+      # Special case: Fig 2 combined tissue × cell type × condition
+      #
+      # X-axis  = cell type
+      # Fill    = condition
+      # Rows    = tissue
+      #
+      # Only combinations that actually exist in the data
+      # are shown. Missing cell types in a tissue therefore
+      # remain absent rather than producing empty bars.
       # --------------------------------------------------------
       
     } else if (
@@ -930,14 +1102,15 @@ server <- function(input, output, session) {
       input$metadata == "tissue"
     ) {
       
-      tissue_colors <- get_tissue_colors(obj)
+      condition_colors <- get_condition_colors(obj)
       
       expression_data <- FetchData(
         object = obj,
         vars = c(
           input$gene,
           "cell_type",
-          "tissue"
+          "tissue",
+          "condition"
         ),
         layer = "data"
       )
@@ -945,13 +1118,69 @@ server <- function(input, output, session) {
       colnames(expression_data) <- c(
         "expression",
         "cell_type",
-        "tissue"
+        "tissue",
+        "condition"
       )
+      
+      # Remove cells with missing metadata
+      expression_data <- expression_data %>%
+        filter(
+          !is.na(expression),
+          !is.na(cell_type),
+          !is.na(tissue),
+          !is.na(condition)
+        )
+      
+      # ------------------------------------------------------
+      # Preserve the actual ordering in the dataset
+      # ------------------------------------------------------
+      
+      tissue_levels <- levels(
+        droplevels(
+          factor(expression_data$tissue)
+        )
+      )
+      
+      cell_type_levels <- levels(
+        droplevels(
+          factor(expression_data$cell_type)
+        )
+      )
+      
+      condition_levels <- levels(
+        droplevels(
+          factor(expression_data$condition)
+        )
+      )
+      
+      expression_data <- expression_data %>%
+        mutate(
+          tissue = factor(
+            tissue,
+            levels = tissue_levels
+          ),
+          cell_type = factor(
+            cell_type,
+            levels = cell_type_levels
+          ),
+          condition = factor(
+            condition,
+            levels = condition_levels
+          )
+        )
+      
+      # ------------------------------------------------------
+      # Calculate mean expression for each actual combination
+      #
+      # Because we group only observed combinations, cell types
+      # absent from a tissue do NOT generate zero/empty bars.
+      # ------------------------------------------------------
       
       summary_data <- expression_data %>%
         group_by(
+          tissue,
           cell_type,
-          tissue
+          condition
         ) %>%
         summarise(
           mean_expression = mean(
@@ -961,38 +1190,70 @@ server <- function(input, output, session) {
           .groups = "drop"
         )
       
+      # ------------------------------------------------------
+      # Plot
+      # ------------------------------------------------------
+      
       ggplot(
         summary_data,
         aes(
           x = cell_type,
           y = mean_expression,
-          fill = tissue
+          fill = condition
         )
       ) +
+        
         geom_col(
-          position = position_dodge()
+          position = position_dodge(
+            width = 0.8
+          ),
+          width = 0.7
         ) +
+        
+        facet_grid(
+          tissue ~ .,
+          scales = "free_x",
+          space = "free_x",
+          drop = TRUE
+        ) +
+        
         scale_fill_manual(
-          values = tissue_colors,
+          values = condition_colors,
           drop = FALSE
         ) +
+        
         labs(
           title = paste(
             "Mean",
             input$gene,
             "expression"
           ),
-          x = "cell_type",
+          subtitle = "Expression by tissue, cell type and condition",
+          x = "Cell type",
           y = "Mean normalized expression",
-          fill = "tissue"
+          fill = "Condition"
         ) +
-        theme_classic(base_size = 13) +
+        
+        theme_classic(
+          base_size = 13
+        ) +
+        
         theme(
           axis.text.x = element_text(
             angle = 45,
-            hjust = 1
+            hjust = 1,
+            vjust = 1
           ),
-          legend.position = "bottom"
+          strip.text.y = element_text(
+            angle = 0,
+            face = "bold"
+          ),
+          strip.background = element_blank(),
+          legend.position = "bottom",
+          panel.spacing = unit(
+            0.8,
+            "lines"
+          )
         )
       
       
