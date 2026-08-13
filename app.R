@@ -528,7 +528,7 @@ server <- function(input, output, session) {
     
     if (is_fig2_subtype) {
       
-      legend_nrow <- 7
+      legend_nrow <- 8
       
     } else {
       
