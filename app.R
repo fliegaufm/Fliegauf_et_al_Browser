@@ -128,6 +128,36 @@ get_condition_colors <- function(obj) {
   colors
 }
 
+# ============================================================
+# Tissue color helper
+# ============================================================
+
+get_tissue_colors <- function(obj) {
+  
+  tissues <- levels(
+    droplevels(
+      factor(obj@meta.data[["tissue"]])
+    )
+  )
+  
+  colors <- createPalette(
+    length(tissues),
+    seedcolors = c(
+      "#1034A6",
+      "#C30F16",
+      "#CCBB44",
+      "#66CCEE",
+      "#AA3377",
+      "#BBBBBB",
+      "#008000"
+    )
+  )
+  
+  names(colors) <- tissues
+  
+  colors
+}
+
 
 # ============================================================
 # 2. UI
@@ -691,6 +721,7 @@ server <- function(input, output, session) {
       )
     )
     
+    
     # --------------------------------------------------------
     # Special case: condition
     # Group by cell_type and split by condition
@@ -723,11 +754,48 @@ server <- function(input, output, session) {
           legend.position = "bottom"
         )
       
-    } else {
       
-      # ------------------------------------------------------
+      # --------------------------------------------------------
+      # Special case: Fig 2 tissue
+      # Group by cell_type and split by tissue
+      # --------------------------------------------------------
+      
+    } else if (
+      input$dataset == "Fig 2 scRNAseq of CNS Macrophage Niches" &&
+      input$metadata == "tissue"
+    ) {
+      
+      tissue_colors <- get_tissue_colors(obj)
+      
+      VlnPlot(
+        object = obj,
+        features = input$gene,
+        layer = "data",
+        group.by = "cell_type",
+        split.by = "tissue",
+        cols = tissue_colors,
+        pt.size = 0
+      ) +
+        labs(
+          title = input$gene,
+          x = "cell_type",
+          y = "Normalized expression"
+        ) +
+        theme_classic(base_size = 13) +
+        theme(
+          axis.text.x = element_text(
+            angle = 45,
+            hjust = 1
+          ),
+          legend.position = "bottom"
+        )
+      
+      
+      # --------------------------------------------------------
       # Default behavior for all other metadata
-      # ------------------------------------------------------
+      # --------------------------------------------------------
+      
+    } else {
       
       group_colors <- get_group_colors(
         obj = obj,
@@ -777,6 +845,7 @@ server <- function(input, output, session) {
         "Gene not found."
       )
     )
+    
     
     # --------------------------------------------------------
     # Special case: condition
@@ -850,11 +919,88 @@ server <- function(input, output, session) {
           legend.position = "bottom"
         )
       
-    } else {
       
-      # ------------------------------------------------------
+      # --------------------------------------------------------
+      # Special case: Fig 2 tissue
+      # Group by cell_type and split by tissue
+      # --------------------------------------------------------
+      
+    } else if (
+      input$dataset == "Fig 2 scRNAseq of CNS Macrophage Niches" &&
+      input$metadata == "tissue"
+    ) {
+      
+      tissue_colors <- get_tissue_colors(obj)
+      
+      expression_data <- FetchData(
+        object = obj,
+        vars = c(
+          input$gene,
+          "cell_type",
+          "tissue"
+        ),
+        layer = "data"
+      )
+      
+      colnames(expression_data) <- c(
+        "expression",
+        "cell_type",
+        "tissue"
+      )
+      
+      summary_data <- expression_data %>%
+        group_by(
+          cell_type,
+          tissue
+        ) %>%
+        summarise(
+          mean_expression = mean(
+            expression,
+            na.rm = TRUE
+          ),
+          .groups = "drop"
+        )
+      
+      ggplot(
+        summary_data,
+        aes(
+          x = cell_type,
+          y = mean_expression,
+          fill = tissue
+        )
+      ) +
+        geom_col(
+          position = position_dodge()
+        ) +
+        scale_fill_manual(
+          values = tissue_colors,
+          drop = FALSE
+        ) +
+        labs(
+          title = paste(
+            "Mean",
+            input$gene,
+            "expression"
+          ),
+          x = "cell_type",
+          y = "Mean normalized expression",
+          fill = "tissue"
+        ) +
+        theme_classic(base_size = 13) +
+        theme(
+          axis.text.x = element_text(
+            angle = 45,
+            hjust = 1
+          ),
+          legend.position = "bottom"
+        )
+      
+      
+      # --------------------------------------------------------
       # Default behavior for all other metadata
-      # ------------------------------------------------------
+      # --------------------------------------------------------
+      
+    } else {
       
       group_colors <- get_group_colors(
         obj = obj,
@@ -1107,8 +1253,54 @@ server <- function(input, output, session) {
       "Reduction: UMAP\n"
     )
     
+    
+    # --------------------------------------------------------
+    # Fig 2: tissue × cell type
+    # --------------------------------------------------------
+    
+    if (
+      input$dataset == "Fig 2 scRNAseq of CNS Macrophage Niches" &&
+      "tissue" %in% colnames(obj@meta.data) &&
+      "cell_type" %in% colnames(obj@meta.data)
+    ) {
+      
+      cat(
+        "\nCells by tissue and cell type:\n\n"
+      )
+      
+      counts <- table(
+        obj@meta.data$cell_type,
+        obj@meta.data$tissue,
+        useNA = "ifany"
+      )
+      
+      print(counts)
+    }
+    
+    
+    # --------------------------------------------------------
+    # Condition: condition × cell type
+    # --------------------------------------------------------
+    
+    if (
+      "condition" %in% colnames(obj@meta.data) &&
+      "cell_type" %in% colnames(obj@meta.data)
+    ) {
+      
+      cat(
+        "\nCells by condition and cell type:\n\n"
+      )
+      
+      counts <- table(
+        obj@meta.data$cell_type,
+        obj@meta.data$condition,
+        useNA = "ifany"
+      )
+      
+      print(counts)
+    }
+    
   })
-  
   
   # ==========================================================
   # Metadata summary
