@@ -385,15 +385,7 @@ server <- function(input, output, session) {
       
       obj <- current_object()
       
-      genes <- if ("RNA" %in% Assays(obj)) {
-        
-        rownames(obj[["RNA"]])
-        
-      } else {
-        
-        rownames(obj[["RNA_called_peaks"]])
-        
-      }
+      genes <- rownames(obj[["RNA"]])
       
       default_gene <- if (
         "CD3D" %in% genes
