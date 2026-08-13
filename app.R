@@ -144,16 +144,16 @@ ui <- page_sidebar(
     bootswatch = "flatly"
   ) |>
     bs_add_rules("
-    .navbar {
-      padding-top: 0.35rem;
-      padding-bottom: 0.35rem;
-      min-height: 48px;
-    }
-    
-    .navbar-brand {
-      font-size: 1.1rem;
-    }
-  "),
+      .navbar {
+        padding-top: 0.35rem;
+        padding-bottom: 0.35rem;
+        min-height: 48px;
+      }
+      
+      .navbar-brand {
+        font-size: 1.1rem;
+      }
+    "),
   
   sidebar = sidebar(
     
@@ -187,9 +187,10 @@ ui <- page_sidebar(
       label = "Search for a gene:",
       choices = NULL,
       selected = NULL,
-      
+      multiple = FALSE,
       options = list(
-        placeholder = "Type a gene name..."
+        placeholder = "Type a gene name...",
+        maxOptions = 1000
       )
     ),
     
@@ -218,8 +219,8 @@ ui <- page_sidebar(
     textOutput("mean_expression"),
     
     textOutput("median_expression")
-  ),
-  
+  )
+)
   
   # ==========================================================
   # Main content
@@ -426,9 +427,9 @@ server <- function(input, output, session) {
       genes <- rownames(obj[["RNA"]])
       
       default_gene <- if (
-        "CD3D" %in% genes
+        "Mrc1" %in% genes
       ) {
-        "CD3D"
+        "Mrc1"
       } else {
         genes[1]
       }
