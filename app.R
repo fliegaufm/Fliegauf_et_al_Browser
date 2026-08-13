@@ -1215,6 +1215,10 @@ server <- function(input, output, session) {
     
     obj <- current_object()
     
+    # --------------------------------------------------------
+    # General dataset information
+    # --------------------------------------------------------
+    
     cat(
       "Dataset:",
       input$dataset,
@@ -1255,17 +1259,23 @@ server <- function(input, output, session) {
     
     
     # --------------------------------------------------------
-    # Fig 2: tissue × cell type
+    # Fig 2 + tissue
+    # Show cell type × tissue
     # --------------------------------------------------------
     
     if (
       input$dataset == "Fig 2 scRNAseq of CNS Macrophage Niches" &&
+      input$metadata == "tissue" &&
       "tissue" %in% colnames(obj@meta.data) &&
       "cell_type" %in% colnames(obj@meta.data)
     ) {
       
       cat(
-        "\nCells by tissue and cell type:\n\n"
+        "\n\n"
+      )
+      
+      cat(
+        "Cells by cell type and tissue:\n\n"
       )
       
       counts <- table(
@@ -1275,20 +1285,26 @@ server <- function(input, output, session) {
       )
       
       print(counts)
-    }
-    
-    
-    # --------------------------------------------------------
-    # Condition: condition × cell type
-    # --------------------------------------------------------
-    
-    if (
+      
+    } else if (
+      
+      # ------------------------------------------------------
+      # Condition
+      # Show cell type × condition
+      # ------------------------------------------------------
+      
+      input$metadata == "condition" &&
       "condition" %in% colnames(obj@meta.data) &&
       "cell_type" %in% colnames(obj@meta.data)
+      
     ) {
       
       cat(
-        "\nCells by condition and cell type:\n\n"
+        "\n\n"
+      )
+      
+      cat(
+        "Cells by cell type and condition:\n\n"
       )
       
       counts <- table(
@@ -1302,8 +1318,9 @@ server <- function(input, output, session) {
     
   })
   
+  
   # ==========================================================
-  # Metadata summary
+  # Selected metadata
   # ==========================================================
   
   output$metadata_summary <- renderTable({
@@ -1312,28 +1329,84 @@ server <- function(input, output, session) {
     
     req(input$metadata)
     
+    
+    # --------------------------------------------------------
+    # Fig 2 + tissue
+    # Show tissue × cell type
+    # --------------------------------------------------------
+    
+    if (
+      input$dataset == "Fig 2 scRNAseq of CNS Macrophage Niches" &&
+      input$metadata == "tissue" &&
+      "tissue" %in% colnames(obj@meta.data) &&
+      "cell_type" %in% colnames(obj@meta.data)
+    ) {
+      
+      counts <- table(
+        obj@meta.data$cell_type,
+        obj@meta.data$tissue,
+        useNA = "ifany"
+      )
+      
+      result <- as.data.frame.matrix(counts)
+      
+      result <- cbind(
+        cell_type = rownames(result),
+        result,
+        row.names = NULL
+      )
+      
+      return(result)
+    }
+    
+    
+    # --------------------------------------------------------
+    # Condition
+    # Show condition × cell type
+    # --------------------------------------------------------
+    
+    if (
+      input$metadata == "condition" &&
+      "condition" %in% colnames(obj@meta.data) &&
+      "cell_type" %in% colnames(obj@meta.data)
+    ) {
+      
+      counts <- table(
+        obj@meta.data$cell_type,
+        obj@meta.data$condition,
+        useNA = "ifany"
+      )
+      
+      result <- as.data.frame.matrix(counts)
+      
+      result <- cbind(
+        cell_type = rownames(result),
+        result,
+        row.names = NULL
+      )
+      
+      return(result)
+    }
+    
+    
+    # --------------------------------------------------------
+    # Default behavior
+    # --------------------------------------------------------
+    
     counts <- table(
-      
       obj@meta.data[[input$metadata]],
-      
       useNA = "ifany"
-      
     )
     
     data.frame(
-      
       Group = names(counts),
-      
       Cells = as.integer(counts),
-      
       row.names = NULL
-      
     )
     
   })
   
 }
-
 
 # ============================================================
 # 4. Run application
