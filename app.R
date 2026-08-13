@@ -47,7 +47,7 @@ get_group_colors <- function(obj, metadata, dataset) {
   
   if (
     dataset == "Fig 2 scRNAseq of CNS Macrophage Niches" &&
-    metadata == "cell_subtype_final"
+    metadata == "cell_type"
   ) {
     
     # Check that every group has a color
@@ -205,22 +205,16 @@ ui <- page_sidebar(
     hr(),
     
     strong("Current dataset"),
-    
     textOutput("cell_count"),
-    
     textOutput("gene_count"),
     
     br(),
     
     strong("Selected gene"),
-    
     textOutput("percent_expressing"),
-    
     textOutput("mean_expression"),
-    
     textOutput("median_expression")
-  )
-)
+  ),
   
   # ==========================================================
   # Main content
@@ -241,11 +235,11 @@ ui <- page_sidebar(
       layout_columns(
         
         card(
-          card_header("Cells colored by metadata"),
+          card_header("UMAP"),
           
           plotOutput(
             outputId = "umap",
-            height = "550px"
+            height = "650px"
           )
         ),
         
@@ -254,7 +248,7 @@ ui <- page_sidebar(
           
           plotOutput(
             outputId = "feature",
-            height = "650px"
+            height = "550px"
           )
         ),
         
@@ -275,11 +269,14 @@ ui <- page_sidebar(
       
       card(
         
-        card_header("Cell types"),
+        card_header("Expression by metadata"),
         
         layout_columns(
           
-          div(),
+          plotOutput(
+            outputId = "violin",
+            height = "500px"
+          ),
           
           plotOutput(
             outputId = "expression_umap",
@@ -293,25 +290,14 @@ ui <- page_sidebar(
       br(),
       
       card(
-        card_header("Expression by metadata"),
-        
-        plotOutput(
-          outputId = "violin",
-          height = "600px"
-        )
-      ),
-      
-      br(),
-      
-      card(
         card_header("Mean expression"),
         
         plotOutput(
           outputId = "barplot",
-          height = "600px"
+          height = "500px"
         )
       )
-    ),   
+    ),
     
     # --------------------------------------------------------
     # DATASET TAB
@@ -427,9 +413,9 @@ server <- function(input, output, session) {
       genes <- rownames(obj[["RNA"]])
       
       default_gene <- if (
-        "Mrc1" %in% genes
+        "Max" %in% genes
       ) {
-        "Mrc1"
+        "Max"
       } else {
         genes[1]
       }
@@ -476,6 +462,30 @@ server <- function(input, output, session) {
     
     
     # --------------------------------------------------------
+    # Determine legend layout
+    # --------------------------------------------------------
+    
+    is_fig2_subtype <- (
+      input$dataset == "Fig 2 scRNAseq of CNS Macrophage Niches" &&
+        input$metadata == "cell_type"
+    )
+    
+    if (is_fig2_subtype) {
+      
+      legend_nrow <- 7
+      
+    } else {
+      
+      legend_nrow <- 2
+      
+    }
+    
+    legend_ncol <- ceiling(
+      length(group_colors) / legend_nrow
+    )
+    
+    
+    # --------------------------------------------------------
     # UMAP
     # --------------------------------------------------------
     
@@ -515,20 +525,22 @@ server <- function(input, output, session) {
       
       theme(
         legend.position = "bottom",
-        legend.text = element_text(size = 12),
-        legend.key.size = grid::unit(0.8, "cm")
-      ) +
-      
+        legend.direction = "horizontal",
+        legend.text = element_text(size = 11),
+        legend.key.size = grid::unit(0.7, "cm"),
+        legend.box = "vertical"
+      )
+    
+    
+    # --------------------------------------------------------
+    # Explicit legend layout
+    # --------------------------------------------------------
+    
+    p <- p +
       guides(
         color = guide_legend(
-          nrow = if (
-            input$dataset == "Fig 2 scRNAseq of CNS Macrophage Niches" &&
-            input$metadata == "cell_subtype_final"
-          ) {
-            10
-          } else {
-            3
-          },
+          nrow = legend_nrow,
+          ncol = legend_ncol,
           byrow = TRUE,
           override.aes = list(
             size = 5,
