@@ -299,7 +299,33 @@ ui <- page_sidebar(
       
       card(
         
-        card_header("Expression by metadata"),
+        card_header("Expression by tissue, cell type and condition"),
+        
+        conditionalPanel(
+          
+          condition = paste0(
+            "input.dataset == ",
+            jsonlite::toJSON(
+              "Fig 2 scRNAseq of CNS Macrophage Niches",
+              auto_unbox = TRUE
+            ),
+            " && input.metadata == 'tissue'"
+          ),
+          
+          div(
+            class = "alert alert-warning",
+            style = "margin-bottom: 1rem;",
+            
+            strong("⚠️ Interpretation warning: "),
+            
+            "Some cell types are represented by very few cells in certain tissues. ",
+            "These observations may reflect contamination or imperfect cell-type assignment ",
+            "rather than a biologically meaningful population, e.g. duralCAM in Cortex. ",
+            
+            "The violin plots and mean-expression bar plots should therefore be ",
+            "interpreted with the cell counts in the Dataset information tab in mind."
+          )
+        ),
         
         layout_columns(
           
