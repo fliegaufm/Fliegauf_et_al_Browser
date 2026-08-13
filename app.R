@@ -98,6 +98,36 @@ get_group_colors <- function(obj, metadata, dataset) {
   
 }
 
+# ============================================================
+# Condition color helper
+# ============================================================
+
+get_condition_colors <- function(obj) {
+  
+  conditions <- levels(
+    droplevels(
+      factor(obj@meta.data[["condition"]])
+    )
+  )
+  
+  colors <- createPalette(
+    length(conditions),
+    seedcolors = c(
+      "#1034A6",
+      "#C30F16",
+      "#CCBB44",
+      "#66CCEE",
+      "#AA3377",
+      "#BBBBBB",
+      "#008000"
+    )
+  )
+  
+  names(colors) <- conditions
+  
+  colors
+}
+
 
 # ============================================================
 # 2. UI
@@ -229,30 +259,26 @@ ui <- page_sidebar(
       
       br(),
       
-      layout_columns(
+      card(
+        card_header("Expression by metadata"),
         
-        card(
-          card_header("Expression by metadata"),
-          
-          plotOutput(
-            outputId = "violin",
-            height = "600px"
-          )
-        ),
+        plotOutput(
+          outputId = "violin",
+          height = "700px"
+        )
+      ),
+      
+      br(),
+      
+      card(
+        card_header("Mean expression"),
         
-        card(
-          card_header("Mean expression"),
-          
-          plotOutput(
-            outputId = "barplot",
-            height = "600px"
-          )
-        ),
-        
-        col_widths = c(6, 6)
+        plotOutput(
+          outputId = "barplot",
+          height = "700px"
+        )
       )
-    ),
-    
+    ),   
     
     # --------------------------------------------------------
     # DATASET TAB
@@ -560,64 +586,78 @@ server <- function(input, output, session) {
     req(input$metadata)
     
     validate(
-      
       need(
-        
         input$gene %in% rownames(obj[["RNA"]]),
-        
         "Gene not found."
-        
       )
-      
     )
     
-    
     # --------------------------------------------------------
-    # Get the exact colors used for these groups
-    # --------------------------------------------------------
-    
-    group_colors <- get_group_colors(
-      obj = obj,
-      metadata = input$metadata,
-      dataset = input$dataset
-    )
-    
-    
-    # --------------------------------------------------------
-    # Violin plot
+    # Special case: condition
+    # Group by cell_type and split by condition
     # --------------------------------------------------------
     
-    VlnPlot(
+    if (input$metadata == "condition") {
       
-      object = obj,
+      condition_colors <- get_condition_colors(obj)
       
-      features = input$gene,
-      
-      layer = "data",
-      
-      group.by = input$metadata,
-      
-      cols = group_colors,
-      
-      pt.size = 0
-      
-    ) +
-      
-      labs(
-        title = input$gene,
-        x = input$metadata,
-        y = "Normalized expression"
+      VlnPlot(
+        object = obj,
+        features = input$gene,
+        layer = "data",
+        group.by = "cell_type",
+        split.by = "condition",
+        cols = condition_colors,
+        pt.size = 0
       ) +
+        labs(
+          title = input$gene,
+          x = "cell_type",
+          y = "Normalized expression"
+        ) +
+        theme_classic(base_size = 13) +
+        theme(
+          axis.text.x = element_text(
+            angle = 45,
+            hjust = 1
+          ),
+          legend.position = "bottom"
+        )
       
-      theme_classic(base_size = 13) +
+    } else {
       
-      theme(
-        axis.text.x = element_text(
-          angle = 45,
-          hjust = 1
-        ),
-        legend.position = "none"
+      # ------------------------------------------------------
+      # Default behavior for all other metadata
+      # ------------------------------------------------------
+      
+      group_colors <- get_group_colors(
+        obj = obj,
+        metadata = input$metadata,
+        dataset = input$dataset
       )
+      
+      VlnPlot(
+        object = obj,
+        features = input$gene,
+        layer = "data",
+        group.by = input$metadata,
+        cols = group_colors,
+        pt.size = 0
+      ) +
+        labs(
+          title = input$gene,
+          x = input$metadata,
+          y = "Normalized expression"
+        ) +
+        theme_classic(base_size = 13) +
+        theme(
+          axis.text.x = element_text(
+            angle = 45,
+            hjust = 1
+          ),
+          legend.position = "none"
+        )
+    }
   })
   
   
@@ -633,142 +673,163 @@ server <- function(input, output, session) {
     req(input$metadata)
     
     validate(
-      
       need(
-        
         input$gene %in% rownames(obj[["RNA"]]),
-        
         "Gene not found."
-        
       )
-      
     )
     
-    
     # --------------------------------------------------------
-    # Get EXACTLY the same colors as the violin plot
-    # --------------------------------------------------------
-    
-    group_colors <- get_group_colors(
-      obj = obj,
-      metadata = input$metadata,
-      dataset = input$dataset
-    )
-    
-    
-    # --------------------------------------------------------
-    # Extract expression
+    # Special case: condition
+    # Group by cell_type and split by condition
     # --------------------------------------------------------
     
-    expression_data <- FetchData(
+    if (input$metadata == "condition") {
       
-      object = obj,
+      condition_colors <- get_condition_colors(obj)
       
-      vars = c(
-        input$gene,
-        input$metadata
-      ),
-      
-      layer = "data"
-      
-    )
-    
-    
-    colnames(expression_data) <- c(
-      "expression",
-      "group"
-    )
-    
-    
-    # --------------------------------------------------------
-    # Calculate statistics
-    # --------------------------------------------------------
-    
-    summary_data <- expression_data %>%
-      
-      group_by(group) %>%
-      
-      summarise(
-        
-        mean_expression = mean(
-          expression,
-          na.rm = TRUE
-        ),
-        
-        median_expression = median(
-          expression,
-          na.rm = TRUE
-        ),
-        
-        cells = n(),
-        
-        percent_expressing =
-          mean(expression > 0) * 100,
-        
-        .groups = "drop"
-        
-      )
-    
-    
-    # Make sure group is a factor with the same
-    # ordering as the color palette
-    
-    summary_data$group <- factor(
-      summary_data$group,
-      levels = names(group_colors)
-    )
-    
-    
-    # --------------------------------------------------------
-    # Plot
-    # --------------------------------------------------------
-    
-    ggplot(
-      
-      summary_data,
-      
-      aes(
-        x = group,
-        y = mean_expression,
-        fill = group
-      )
-      
-    ) +
-      
-      geom_col() +
-      
-      scale_fill_manual(
-        values = group_colors,
-        drop = FALSE
-      ) +
-      
-      labs(
-        
-        title = paste(
-          "Mean",
+      expression_data <- FetchData(
+        object = obj,
+        vars = c(
           input$gene,
-          "expression"
+          "cell_type",
+          "condition"
         ),
-        
-        x = input$metadata,
-        
-        y = "Mean normalized expression"
-        
-      ) +
-      
-      theme_classic(base_size = 13) +
-      
-      theme(
-        
-        axis.text.x = element_text(
-          angle = 45,
-          hjust = 1
-        ),
-        
-        legend.position = "none"
-        
+        layer = "data"
       )
-    
+      
+      colnames(expression_data) <- c(
+        "expression",
+        "cell_type",
+        "condition"
+      )
+      
+      summary_data <- expression_data %>%
+        group_by(
+          cell_type,
+          condition
+        ) %>%
+        summarise(
+          mean_expression = mean(
+            expression,
+            na.rm = TRUE
+          ),
+          .groups = "drop"
+        )
+      
+      ggplot(
+        summary_data,
+        aes(
+          x = cell_type,
+          y = mean_expression,
+          fill = condition
+        )
+      ) +
+        geom_col(
+          position = position_dodge()
+        ) +
+        scale_fill_manual(
+          values = condition_colors,
+          drop = FALSE
+        ) +
+        labs(
+          title = paste(
+            "Mean",
+            input$gene,
+            "expression"
+          ),
+          x = "cell_type",
+          y = "Mean normalized expression",
+          fill = "condition"
+        ) +
+        theme_classic(base_size = 13) +
+        theme(
+          axis.text.x = element_text(
+            angle = 45,
+            hjust = 1
+          ),
+          legend.position = "bottom"
+        )
+      
+    } else {
+      
+      # ------------------------------------------------------
+      # Default behavior for all other metadata
+      # ------------------------------------------------------
+      
+      group_colors <- get_group_colors(
+        obj = obj,
+        metadata = input$metadata,
+        dataset = input$dataset
+      )
+      
+      expression_data <- FetchData(
+        object = obj,
+        vars = c(
+          input$gene,
+          input$metadata
+        ),
+        layer = "data"
+      )
+      
+      colnames(expression_data) <- c(
+        "expression",
+        "group"
+      )
+      
+      summary_data <- expression_data %>%
+        group_by(group) %>%
+        summarise(
+          mean_expression = mean(
+            expression,
+            na.rm = TRUE
+          ),
+          median_expression = median(
+            expression,
+            na.rm = TRUE
+          ),
+          cells = n(),
+          percent_expressing =
+            mean(expression > 0) * 100,
+          .groups = "drop"
+        )
+      
+      summary_data$group <- factor(
+        summary_data$group,
+        levels = names(group_colors)
+      )
+      
+      ggplot(
+        summary_data,
+        aes(
+          x = group,
+          y = mean_expression,
+          fill = group
+        )
+      ) +
+        geom_col() +
+        scale_fill_manual(
+          values = group_colors,
+          drop = FALSE
+        ) +
+        labs(
+          title = paste(
+            "Mean",
+            input$gene,
+            "expression"
+          ),
+          x = input$metadata,
+          y = "Mean normalized expression"
+        ) +
+        theme_classic(base_size = 13) +
+        theme(
+          axis.text.x = element_text(
+            angle = 45,
+            hjust = 1
+          ),
+          legend.position = "none"
+        )
+    }
   })
   
   

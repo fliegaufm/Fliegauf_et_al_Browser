@@ -1,0 +1,10 @@
+name: fliegauf-et-al-browser
+title:
+username: fliegauf
+account: fliegauf
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 17688821
+bundleId: 12400584
+url: https://fliegauf.shinyapps.io/fliegauf-et-al-browser/
+version: 1
