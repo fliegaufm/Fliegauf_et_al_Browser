@@ -135,12 +135,25 @@ get_condition_colors <- function(obj) {
 
 ui <- page_sidebar(
   
-  title = "Single Cell Explorer for Fliegauf et al. Nature Immunology 2026",
+  title = "Single Cell Explorer for Fliegauf et al. Nature Immunology 2026 - Prinz Laboratory",
+  
+  fillable = FALSE,
   
   theme = bs_theme(
     version = 5,
     bootswatch = "flatly"
-  ),
+  ) |>
+    bs_add_rules("
+    .navbar {
+      padding-top: 0.35rem;
+      padding-bottom: 0.35rem;
+      min-height: 48px;
+    }
+    
+    .navbar-brand {
+      font-size: 1.1rem;
+    }
+  "),
   
   sidebar = sidebar(
     
@@ -157,7 +170,7 @@ ui <- page_sidebar(
     
     hr(),
     
-    h4("UMAP coloring"),
+    h4("Assess gene expression by"),
     
     selectInput(
       inputId = "metadata",
@@ -231,7 +244,7 @@ ui <- page_sidebar(
           
           plotOutput(
             outputId = "umap",
-            height = "650px"
+            height = "550px"
           )
         ),
         
@@ -260,11 +273,30 @@ ui <- page_sidebar(
       br(),
       
       card(
+        
+        card_header("Cell types"),
+        
+        layout_columns(
+          
+          div(),
+          
+          plotOutput(
+            outputId = "expression_umap",
+            height = "300px"
+          ),
+          
+          col_widths = c(8, 4)
+        )
+      ),
+      
+      br(),
+      
+      card(
         card_header("Expression by metadata"),
         
         plotOutput(
           outputId = "violin",
-          height = "700px"
+          height = "600px"
         )
       ),
       
@@ -275,7 +307,7 @@ ui <- page_sidebar(
         
         plotOutput(
           outputId = "barplot",
-          height = "700px"
+          height = "600px"
         )
       )
     ),   
@@ -360,11 +392,17 @@ server <- function(input, output, session) {
       
       metadata <- colnames(obj@meta.data)
       
+      default_metadata <- if ("cell_type" %in% metadata) {
+        "cell_type"
+      } else {
+        metadata[1]
+      }
+      
       updateSelectInput(
         session = session,
         inputId = "metadata",
         choices = metadata,
-        selected = metadata[1]
+        selected = default_metadata
       )
       
     },
@@ -486,13 +524,13 @@ server <- function(input, output, session) {
             input$dataset == "Fig 2 scRNAseq of CNS Macrophage Niches" &&
             input$metadata == "cell_subtype_final"
           ) {
-            8
+            10
           } else {
             3
           },
           byrow = TRUE,
           override.aes = list(
-            size = 6,
+            size = 5,
             alpha = 1
           )
         )
@@ -507,6 +545,62 @@ server <- function(input, output, session) {
     
     
     p
+    
+  })
+  
+  # ==========================================================
+  # Small cell-type UMAP for Expression tab
+  # ==========================================================
+  
+  output$expression_umap <- renderPlot({
+    
+    obj <- current_object()
+    
+    validate(
+      need(
+        "cell_type" %in% colnames(obj@meta.data),
+        "cell_type metadata not available."
+      )
+    )
+    
+    cell_type_colors <- get_group_colors(
+      obj = obj,
+      metadata = "cell_type",
+      dataset = input$dataset
+    )
+    
+    DimPlot(
+      
+      object = obj,
+      
+      reduction = "umap",
+      
+      group.by = "cell_type",
+      
+      cols = cell_type_colors,
+      
+      label = TRUE,
+      
+      repel = TRUE,
+      
+      pt.size = 1,
+      
+      raster = input$raster,
+      
+      shuffle = TRUE,
+      
+      seed = 123
+      
+    ) +
+      
+      theme_classic(base_size = 11) +
+      
+      NoAxes() +
+      
+      theme(
+        legend.position = "none",
+        plot.margin = margin(5, 5, 5, 5)
+      )
     
   })
   
