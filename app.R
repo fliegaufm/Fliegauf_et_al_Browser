@@ -413,9 +413,9 @@ server <- function(input, output, session) {
       genes <- rownames(obj[["RNA"]])
       
       default_gene <- if (
-        "Max" %in% genes
+        "Lyve1" %in% genes
       ) {
-        "Max"
+        "Lyve1"
       } else {
         genes[1]
       }
