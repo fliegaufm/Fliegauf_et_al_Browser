@@ -16,8 +16,6 @@ library(Polychrome)
 # 1. Dataset configuration
 # ============================================================
 
-setwd("/Users/MaximilianFliegauf/Documents/Promotion/Institute of NPAT database - Seurat Objects/App")
-
 dataset_files <- c(
   "Fig 2 scRNAseq of CNS Macrophage Niches" = "web_data/fig2.rds",
   "Fig 5 scRNAseq of sdCAMs" = "web_data/fig5_cams.rds",
