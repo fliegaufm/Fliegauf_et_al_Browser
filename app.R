@@ -16,6 +16,8 @@ library(Polychrome)
 # 1. Dataset configuration
 # ============================================================
 
+setwd("/Users/MaximilianFliegauf/Documents/Promotion/Institute of NPAT database - Seurat Objects/App")
+
 dataset_files <- c(
   "Fig 2 scRNAseq of CNS Macrophage Niches" = "web_data/fig2.rds",
   "Fig 5 scRNAseq of sdCAMs" = "web_data/fig5_cams.rds",
@@ -162,26 +164,48 @@ get_tissue_colors <- function(obj) {
 # ============================================================
 # 2. UI
 # ============================================================
-
 ui <- page_sidebar(
   
   title = "Single Cell Explorer for Fliegauf et al. Nature Immunology 2026 - Prinz Laboratory",
   
-  fillable = FALSE,
+  fillable = TRUE,                    # ← enables flexible height
   
   theme = bs_theme(
     version = 5,
-    bootswatch = "flatly"
+    bootswatch = "darkly",            # ← dark theme
+    primary = "#0d6efd",
+    "navbar-bg" = "#1a1a1a"
   ) |>
     bs_add_rules("
+      /* tighter navbar */
       .navbar {
         padding-top: 0.35rem;
         padding-bottom: 0.35rem;
         min-height: 48px;
       }
-      
       .navbar-brand {
         font-size: 1.1rem;
+      }
+      
+      /* dark-friendly cards & plots */
+      .card {
+        background-color: #2b2b2b;
+        border-color: #404040;
+      }
+      .card-header {
+        background-color: #333;
+        border-bottom-color: #404040;
+        color: #e9ecef;
+      }
+      
+      /* make plot containers fill available space */
+      .plot-container, .shiny-plot-output {
+        height: 100% !important;
+      }
+      
+      /* improve contrast of text outputs in sidebar */
+      .sidebar {
+        background-color: #1e1e1e;
       }
     "),
   
@@ -265,24 +289,29 @@ ui <- page_sidebar(
       layout_columns(
         
         card(
+          full_screen = TRUE,                 # nice optional full-screen button
           card_header("UMAP"),
           
           plotOutput(
             outputId = "umap",
-            height = "650px"
-          )
+            height = "100%"                   # ← adaptive height
+          ) |> 
+            tagAppendAttributes(style = "min-height: 480px;")  # safety floor
         ),
         
         card(
+          full_screen = TRUE,
           card_header("Gene expression"),
           
           plotOutput(
             outputId = "feature",
-            height = "550px"
-          )
+            height = "100%"
+          ) |> 
+            tagAppendAttributes(style = "min-height: 420px;")
         ),
         
-        col_widths = c(6, 6)
+        col_widths = c(6, 6),
+        fill = TRUE                           # ← columns also fill
       )
     ),
     
@@ -298,7 +327,7 @@ ui <- page_sidebar(
       br(),
       
       card(
-        
+        full_screen = TRUE,
         card_header("Expression by tissue, cell type and condition"),
         
         conditionalPanel(
@@ -331,27 +360,29 @@ ui <- page_sidebar(
           
           plotOutput(
             outputId = "violin",
-            height = "500px"
-          ),
+            height = "100%"
+          ) |> tagAppendAttributes(style = "min-height: 420px;"),
           
           plotOutput(
             outputId = "expression_umap",
-            height = "300px"
-          ),
+            height = "100%"
+          ) |> tagAppendAttributes(style = "min-height: 280px;"),
           
-          col_widths = c(8, 4)
+          col_widths = c(8, 4),
+          fill = TRUE
         )
       ),
       
       br(),
       
       card(
+        full_screen = TRUE,
         card_header("Mean expression"),
         
         plotOutput(
           outputId = "barplot",
-          height = "500px"
-        )
+          height = "100%"
+        ) |> tagAppendAttributes(style = "min-height: 420px;")
       )
     ),
     
